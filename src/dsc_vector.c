@@ -1,6 +1,6 @@
 #define _DEFAULT_SOURCE // reallocarray
 
-#include "vector.h"
+#include "dsc_vector.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +45,10 @@ void dsc_vector_clear(struct DS_COMMON_Vector* vector)
 /** @brief Reserves storage for at least new_capacity elements without shrinking. */
 bool dsc_vector_reserve(struct DS_COMMON_Vector* vector, size_t new_capacity)
 {
+    if(new_capacity <= vector->capacity)
+    {
+        return true;
+    }
     if(vector->data == nullptr)
     {
         if(!(vector->data = calloc(new_capacity, vector->element_size)))
@@ -116,11 +120,11 @@ bool dsc_vector_pop_back(struct DS_COMMON_Vector* vector)
 /** @brief Inserts a copy of one element before index, shifting later elements. */
 bool dsc_vector_insert(struct DS_COMMON_Vector* vector, size_t index, void* element)
 {
-    if(!_impl_dsc_vector_grow_if_necessary(vector, vector->size + 1))
+    if(index > vector->size)
     {
         return false;
     }
-    if(index > vector->size)
+    if(!_impl_dsc_vector_grow_if_necessary(vector, vector->size + 1))
     {
         return false;
     }
@@ -152,7 +156,7 @@ bool dsc_vector_erase(struct DS_COMMON_Vector* vector, size_t index)
 }
 
 /** @brief Returns a const pointer to the first element, or NULL when empty. */
-const void* _impl_dsc_vector_front_const(const struct DS_COMMON_Vector* vector)
+const void* dsc_vector_front_const(const struct DS_COMMON_Vector* vector)
 {
     if(vector->size == 0)
     {
@@ -161,7 +165,7 @@ const void* _impl_dsc_vector_front_const(const struct DS_COMMON_Vector* vector)
     return vector->data;
 }
 /** @brief Returns a mutable pointer to the first element, or NULL when empty. */
-void* _impl_dsc_vector_front(struct DS_COMMON_Vector* vector)
+void* dsc_vector_front_nconst(struct DS_COMMON_Vector* vector)
 {
     if(vector->size == 0)
     {
@@ -171,7 +175,7 @@ void* _impl_dsc_vector_front(struct DS_COMMON_Vector* vector)
 }
 
 /** @brief Returns a const pointer to the last element, or NULL when empty. */
-const void* _impl_dsc_vector_back_const(const struct DS_COMMON_Vector* vector)
+const void* dsc_vector_back_const(const struct DS_COMMON_Vector* vector)
 {
     if(vector->size == 0)
     {
@@ -180,7 +184,7 @@ const void* _impl_dsc_vector_back_const(const struct DS_COMMON_Vector* vector)
     return (char*)vector->data + (vector->size - 1) * vector->element_size;
 }
 /** @brief Returns a mutable pointer to the last element, or NULL when empty. */
-void* _impl_dsc_vector_back(struct DS_COMMON_Vector* vector)
+void* dsc_vector_back_nconst(struct DS_COMMON_Vector* vector)
 {
     if(vector->size == 0)
     {
@@ -190,7 +194,7 @@ void* _impl_dsc_vector_back(struct DS_COMMON_Vector* vector)
 }
 
 /** @brief Returns a const pointer to the element buffer, or NULL when empty. */
-const void* _impl_dsc_vector_data_const(const struct DS_COMMON_Vector* vector)
+const void* dsc_vector_data_const(const struct DS_COMMON_Vector* vector)
 {
     if(vector->size == 0)
     {
@@ -199,7 +203,7 @@ const void* _impl_dsc_vector_data_const(const struct DS_COMMON_Vector* vector)
     return vector->data;
 }
 /** @brief Returns a mutable pointer to the element buffer, or NULL when empty. */
-void* _impl_dsc_vector_data(struct DS_COMMON_Vector* vector)
+void* dsc_vector_data_nconst(struct DS_COMMON_Vector* vector)
 {
     if(vector->size == 0)
     {
@@ -209,7 +213,7 @@ void* _impl_dsc_vector_data(struct DS_COMMON_Vector* vector)
 }
 
 /** @brief Returns a const element pointer, or NULL if index is out of range. */
-const void* _impl_dsc_vector_at_const(const struct DS_COMMON_Vector* vector, size_t index)
+const void* dsc_vector_at_const(const struct DS_COMMON_Vector* vector, size_t index)
 {
     if(index >= vector->size)
     {
@@ -218,7 +222,7 @@ const void* _impl_dsc_vector_at_const(const struct DS_COMMON_Vector* vector, siz
     return (char*)vector->data + index * vector->element_size;
 }
 /** @brief Returns a mutable element pointer, or NULL if index is out of range. */
-void* _impl_dsc_vector_at(struct DS_COMMON_Vector* vector, size_t index)
+void* dsc_vector_at_nconst(struct DS_COMMON_Vector* vector, size_t index)
 {
     if(index >= vector->size)
     {

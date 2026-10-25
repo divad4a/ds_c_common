@@ -1,5 +1,5 @@
+#include "dsc_vector.h"
 #include "greatest.h"
-#include "vector.h"
 
 #include <stdint.h>
 
@@ -88,6 +88,20 @@ TEST free_is_repeatable_and_vector_is_reusable(void)
     PASS();
 }
 
+TEST shrink_allocated_empty_vector(void)
+{
+    ASSERT(dsc_vector_reserve(&vec, 8));
+    CHECK_CALL(push_ints(3));
+    dsc_vector_clear(&vec);
+    ASSERT(dsc_vector_shrink_to_fit(&vec));
+    ASSERT_SIZE(0, dsc_vector_size(&vec));
+    ASSERT_SIZE(0, dsc_vector_capacity(&vec));
+    ASSERT_EQ(nullptr, dsc_vector_data(&vec));
+    CHECK_CALL(push_ints(2));
+    ASSERT_INT_AT(1, 1);
+    PASS();
+}
+
 SUITE(vector_lifecycle)
 {
     SET_SETUP(setup_int_vector, nullptr);
@@ -97,6 +111,7 @@ SUITE(vector_lifecycle)
         RUN_TEST(free_resets_vector);
         RUN_TEST(clear_keeps_capacity);
         RUN_TEST(free_is_repeatable_and_vector_is_reusable);
+        RUN_TEST(shrink_allocated_empty_vector);
     });
 }
 
@@ -135,6 +150,29 @@ TEST push_back_grows_capacity(void)
     {
         ASSERT_INT_AT(i, (size_t)i);
     }
+    PASS();
+}
+
+TEST push_past_reserved_capacity_one(void)
+{
+    ASSERT(dsc_vector_reserve(&vec, 1));
+    CHECK_CALL(push_ints(2));
+    ASSERT_SIZE(2, dsc_vector_size(&vec));
+    ASSERT_INT_AT(0, 0);
+    ASSERT_INT_AT(1, 1);
+    PASS();
+}
+
+TEST push_after_shrinking_to_one(void)
+{
+    CHECK_CALL(push_ints(1));
+    ASSERT(dsc_vector_shrink_to_fit(&vec));
+    ASSERT_SIZE(1, dsc_vector_capacity(&vec));
+    int value = 42;
+    ASSERT(dsc_vector_push_back(&vec, &value));
+    ASSERT_SIZE(2, dsc_vector_size(&vec));
+    ASSERT_INT_AT(0, 0);
+    ASSERT_INT_AT(42, 1);
     PASS();
 }
 
@@ -217,6 +255,8 @@ SUITE(vector_capacity)
         RUN_TEST(reserve_increases_capacity);
         RUN_TEST(reserve_smaller_does_not_shrink);
         RUN_TEST(push_back_grows_capacity);
+        RUN_TEST(push_past_reserved_capacity_one);
+        RUN_TEST(push_after_shrinking_to_one);
         RUN_TEST(shrink_to_fit_matches_size);
         RUN_TEST(reserve_preserves_existing_elements);
         RUN_TEST(shrink_noop_cases);
@@ -387,6 +427,18 @@ TEST accessors_preserve_pointer_types(void)
     static_assert(_Generic(dsc_vector_back(cvec), const void*: 1, default: 0), "const back must return const void*");
     static_assert(_Generic(dsc_vector_data(cvec), const void*: 1, default: 0), "const data must return const void*");
     static_assert(_Generic(dsc_vector_at(cvec, 0), const void*: 1, default: 0), "const at must return const void*");
+    static_assert(_Generic(dsc_vector_front_nconst(&vec), void*: 1, default: 0), "front_nconst must return void*");
+    static_assert(_Generic(dsc_vector_back_nconst(&vec), void*: 1, default: 0), "back_nconst must return void*");
+    static_assert(_Generic(dsc_vector_data_nconst(&vec), void*: 1, default: 0), "data_nconst must return void*");
+    static_assert(_Generic(dsc_vector_at_nconst(&vec, 0), void*: 1, default: 0), "at_nconst must return void*");
+    static_assert(_Generic(dsc_vector_front_const(cvec), const void*: 1, default: 0),
+                  "front_const must return const void*");
+    static_assert(_Generic(dsc_vector_back_const(cvec), const void*: 1, default: 0),
+                  "back_const must return const void*");
+    static_assert(_Generic(dsc_vector_data_const(cvec), const void*: 1, default: 0),
+                  "data_const must return const void*");
+    static_assert(_Generic(dsc_vector_at_const(cvec, 0), const void*: 1, default: 0),
+                  "at_const must return const void*");
     PASS();
 }
 
@@ -404,6 +456,14 @@ TEST accessors_on_empty_return_null(void)
         ASSERT_EQ(nullptr, dsc_vector_back(cvec));
         ASSERT_EQ(nullptr, dsc_vector_data(cvec));
         ASSERT_EQ(nullptr, dsc_vector_at(cvec, 0));
+        ASSERT_EQ(nullptr, dsc_vector_front_const(cvec));
+        ASSERT_EQ(nullptr, dsc_vector_back_const(cvec));
+        ASSERT_EQ(nullptr, dsc_vector_data_const(cvec));
+        ASSERT_EQ(nullptr, dsc_vector_at_const(cvec, 0));
+        ASSERT_EQ(nullptr, dsc_vector_front_nconst(&vec));
+        ASSERT_EQ(nullptr, dsc_vector_back_nconst(&vec));
+        ASSERT_EQ(nullptr, dsc_vector_data_nconst(&vec));
+        ASSERT_EQ(nullptr, dsc_vector_at_nconst(&vec, 0));
         if(state == 0)
         {
             ASSERT(dsc_vector_reserve(&vec, 8));
@@ -482,6 +542,55 @@ TEST mutable_accessors_update_const_view(void)
     PASS();
 }
 
+TEST explicit_accessors_match_generic_access(void)
+{
+    CHECK_CALL(push_ints(4));
+    const struct DS_COMMON_Vector* cvec = &vec;
+    int* front = dsc_vector_front_nconst(&vec);
+    int* back = dsc_vector_back_nconst(&vec);
+    int* data = dsc_vector_data_nconst(&vec);
+    int* element = dsc_vector_at_nconst(&vec, 1);
+    ASSERT(front != nullptr);
+    ASSERT(back != nullptr);
+    ASSERT(data != nullptr);
+    ASSERT(element != nullptr);
+    ASSERT_EQ(dsc_vector_front(&vec), front);
+    ASSERT_EQ(dsc_vector_back(&vec), back);
+    ASSERT_EQ(dsc_vector_data(&vec), data);
+    ASSERT_EQ(dsc_vector_at(&vec, 1), element);
+    ASSERT_EQ(front, dsc_vector_front_const(cvec));
+    ASSERT_EQ(back, dsc_vector_back_const(cvec));
+    ASSERT_EQ(data, dsc_vector_data_const(cvec));
+    ASSERT_EQ(element, dsc_vector_at_const(cvec, 1));
+    ASSERT_EQ(dsc_vector_front(cvec), dsc_vector_front_const(cvec));
+    ASSERT_EQ(dsc_vector_back(cvec), dsc_vector_back_const(cvec));
+    ASSERT_EQ(dsc_vector_data(cvec), dsc_vector_data_const(cvec));
+    for(size_t i = 0; i < 4; ++i)
+    {
+        ASSERT_EQ(data + i, dsc_vector_at_nconst(&vec, i));
+        ASSERT_EQ(data + i, dsc_vector_at_const(cvec, i));
+        ASSERT_EQ(dsc_vector_at(cvec, i), dsc_vector_at_const(cvec, i));
+    }
+    ASSERT_EQ(nullptr, dsc_vector_at_const(cvec, 4));
+    ASSERT_EQ(nullptr, dsc_vector_at_const(cvec, SIZE_MAX));
+    ASSERT_EQ(nullptr, dsc_vector_at_nconst(&vec, 4));
+    ASSERT_EQ(nullptr, dsc_vector_at_nconst(&vec, SIZE_MAX));
+
+    *front = 10;
+    *back = 30;
+    data[2] = 20;
+    *element = 42;
+    const int* const_front = dsc_vector_front_const(cvec);
+    const int* const_back = dsc_vector_back_const(cvec);
+    const int* const_data = dsc_vector_data_const(cvec);
+    const int* const_element = dsc_vector_at_const(cvec, 1);
+    ASSERT_EQ_FMT(10, *const_front, "%d");
+    ASSERT_EQ_FMT(30, *const_back, "%d");
+    ASSERT_EQ_FMT(20, const_data[2], "%d");
+    ASSERT_EQ_FMT(42, *const_element, "%d");
+    PASS();
+}
+
 TEST const_accessors(void)
 {
     CHECK_CALL(push_ints(3));
@@ -518,6 +627,7 @@ SUITE(vector_access)
         RUN_TEST(front_back_data_at);
         RUN_TEST(at_allows_modification);
         RUN_TEST(mutable_accessors_update_const_view);
+        RUN_TEST(explicit_accessors_match_generic_access);
         RUN_TEST(const_accessors);
     });
 }
@@ -593,53 +703,6 @@ SUITE(vector_element_types)
     });
 }
 
-/* CTest runs these separately so a hang or memory error cannot hide other results. */
-TEST push_past_reserved_capacity_one(void)
-{
-    ASSERT(dsc_vector_reserve(&vec, 1));
-    CHECK_CALL(push_ints(2));
-    ASSERT_SIZE(2, dsc_vector_size(&vec));
-    ASSERT_INT_AT(0, 0);
-    ASSERT_INT_AT(1, 1);
-    PASS();
-}
-
-TEST push_after_shrinking_to_one(void)
-{
-    CHECK_CALL(push_ints(1));
-    ASSERT(dsc_vector_shrink_to_fit(&vec));
-    ASSERT_SIZE(1, dsc_vector_capacity(&vec));
-    int value = 42;
-    ASSERT(dsc_vector_push_back(&vec, &value));
-    ASSERT_SIZE(2, dsc_vector_size(&vec));
-    ASSERT_INT_AT(0, 0);
-    ASSERT_INT_AT(42, 1);
-    PASS();
-}
-
-TEST shrink_allocated_empty_vector(void)
-{
-    ASSERT(dsc_vector_reserve(&vec, 8));
-    CHECK_CALL(push_ints(3));
-    dsc_vector_clear(&vec);
-    ASSERT(dsc_vector_shrink_to_fit(&vec));
-    ASSERT_SIZE(0, dsc_vector_size(&vec));
-    ASSERT_SIZE(0, dsc_vector_capacity(&vec));
-    ASSERT_EQ(nullptr, dsc_vector_data(&vec));
-    CHECK_CALL(push_ints(2));
-    ASSERT_INT_AT(1, 1);
-    PASS();
-}
-
-SUITE(vector_regressions)
-{
-    SET_SETUP(setup_int_vector, nullptr);
-    SET_TEARDOWN(teardown_vector, nullptr);
-    RUN_TEST(push_past_reserved_capacity_one);
-    RUN_TEST(push_after_shrinking_to_one);
-    RUN_TEST(shrink_allocated_empty_vector);
-}
-
 GREATEST_MAIN_DEFS();
 
 int main(int argc, char** argv)
@@ -650,6 +713,5 @@ int main(int argc, char** argv)
     RUN_SUITE(vector_modifiers);
     RUN_SUITE(vector_access);
     RUN_SUITE(vector_element_types);
-    RUN_SUITE(vector_regressions);
     GREATEST_MAIN_END();
 }

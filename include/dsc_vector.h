@@ -25,10 +25,10 @@
  */
 struct DS_COMMON_Vector
 {
-    void* data;           /**< Allocated buffer, or NULL if no storage exists. */
-    size_t size;          /**< Number of live elements. */
-    size_t capacity;      /**< Number of elements the buffer can hold. */
-    size_t element_size;  /**< Size of each element in bytes. */
+    void* data;          /**< Allocated buffer, or NULL if no storage exists. */
+    size_t size;         /**< Number of live elements. */
+    size_t capacity;     /**< Number of elements the buffer can hold. */
+    size_t element_size; /**< Size of each element in bytes. */
 };
 
 
@@ -105,9 +105,7 @@ bool dsc_vector_pop_back(struct DS_COMMON_Vector* vector);
  * @pre The source element must not overlap the vector's allocated storage.
  * @retval true The element was inserted.
  * @retval false The index exceeds size or allocation failed.
- * @warning An invalid index may still cause storage growth and invalidate
- * pointers, since the current implementation reserves before checking index.
- * Size and element values remain unchanged on failure.
+ * @note The vector is unchanged on failure.
  * @note On success, elements at and after index shift; reallocation invalidates
  * all pointers into the buffer.
  */
@@ -123,8 +121,20 @@ bool dsc_vector_insert(struct DS_COMMON_Vector* vector, size_t index, void* elem
  */
 bool dsc_vector_erase(struct DS_COMMON_Vector* vector, size_t index);
 
-const void* _impl_dsc_vector_front_const(const struct DS_COMMON_Vector* vector);
-void* _impl_dsc_vector_front(struct DS_COMMON_Vector* vector);
+/**
+ * @brief Returns a const pointer to the first element, or NULL when empty.
+ * @param[in] vector Vector to access.
+ * @return Borrowed const element pointer; see file-level lifetime rules.
+ */
+const void* dsc_vector_front_const(const struct DS_COMMON_Vector* vector);
+
+/**
+ * @brief Returns a mutable pointer to the first element, or NULL when empty.
+ * @param[in] vector Vector to access.
+ * @return Borrowed mutable element pointer; see file-level lifetime rules.
+ */
+void* dsc_vector_front_nconst(struct DS_COMMON_Vector* vector);
+
 /**
  * @brief Returns a pointer to the first element, or NULL when empty.
  * @param[in] vector Initialized mutable or const vector pointer.
@@ -133,11 +143,23 @@ void* _impl_dsc_vector_front(struct DS_COMMON_Vector* vector);
  */
 #define dsc_vector_front(vector)                                                                                       \
     _Generic((vector),                                                                                                 \
-        const struct DS_COMMON_Vector*: _impl_dsc_vector_front_const,                                                  \
-        struct DS_COMMON_Vector*: _impl_dsc_vector_front)(vector)
+        const struct DS_COMMON_Vector*: dsc_vector_front_const,                                                        \
+        struct DS_COMMON_Vector*: dsc_vector_front_nconst)(vector)
 
-const void* _impl_dsc_vector_back_const(const struct DS_COMMON_Vector* vector);
-void* _impl_dsc_vector_back(struct DS_COMMON_Vector* vector);
+/**
+ * @brief Returns a const pointer to the last element, or NULL when empty.
+ * @param[in] vector Vector to access.
+ * @return Borrowed const element pointer; see file-level lifetime rules.
+ */
+const void* dsc_vector_back_const(const struct DS_COMMON_Vector* vector);
+
+/**
+ * @brief Returns a mutable pointer to the last element, or NULL when empty.
+ * @param[in] vector Vector to access.
+ * @return Borrowed mutable element pointer; see file-level lifetime rules.
+ */
+void* dsc_vector_back_nconst(struct DS_COMMON_Vector* vector);
+
 /**
  * @brief Returns a pointer to the last element, or NULL when empty.
  * @param[in] vector Initialized mutable or const vector pointer.
@@ -146,11 +168,23 @@ void* _impl_dsc_vector_back(struct DS_COMMON_Vector* vector);
  */
 #define dsc_vector_back(vector)                                                                                        \
     _Generic((vector),                                                                                                 \
-        const struct DS_COMMON_Vector*: _impl_dsc_vector_back_const,                                                   \
-        struct DS_COMMON_Vector*: _impl_dsc_vector_back)(vector)
+        const struct DS_COMMON_Vector*: dsc_vector_back_const,                                                         \
+        struct DS_COMMON_Vector*: dsc_vector_back_nconst)(vector)
 
-const void* _impl_dsc_vector_data_const(const struct DS_COMMON_Vector* vector);
-void* _impl_dsc_vector_data(struct DS_COMMON_Vector* vector);
+/**
+ * @brief Returns a const buffer pointer, or NULL when empty even if allocated.
+ * @param[in] vector Vector to access.
+ * @return Borrowed const buffer pointer; see file-level lifetime rules.
+ */
+const void* dsc_vector_data_const(const struct DS_COMMON_Vector* vector);
+
+/**
+ * @brief Returns a mutable buffer pointer, or NULL when empty even if allocated.
+ * @param[in] vector Vector to access.
+ * @return Borrowed mutable buffer pointer; see file-level lifetime rules.
+ */
+void* dsc_vector_data_nconst(struct DS_COMMON_Vector* vector);
+
 /**
  * @brief Returns the contiguous element buffer, or NULL when empty.
  * @param[in] vector Initialized mutable or const vector pointer.
@@ -160,11 +194,25 @@ void* _impl_dsc_vector_data(struct DS_COMMON_Vector* vector);
  */
 #define dsc_vector_data(vector)                                                                                        \
     _Generic((vector),                                                                                                 \
-        const struct DS_COMMON_Vector*: _impl_dsc_vector_data_const,                                                   \
-        struct DS_COMMON_Vector*: _impl_dsc_vector_data)(vector)
+        const struct DS_COMMON_Vector*: dsc_vector_data_const,                                                         \
+        struct DS_COMMON_Vector*: dsc_vector_data_nconst)(vector)
 
-const void* _impl_dsc_vector_at_const(const struct DS_COMMON_Vector* vector, size_t index);
-void* _impl_dsc_vector_at(struct DS_COMMON_Vector* vector, size_t index);
+/**
+ * @brief Returns a const element pointer, or NULL if index is out of range.
+ * @param[in] vector Vector to access.
+ * @param[in] index Zero-based element index.
+ * @return Borrowed const element pointer; see file-level lifetime rules.
+ */
+const void* dsc_vector_at_const(const struct DS_COMMON_Vector* vector, size_t index);
+
+/**
+ * @brief Returns a mutable element pointer, or NULL if index is out of range.
+ * @param[in] vector Vector to access.
+ * @param[in] index Zero-based element index.
+ * @return Borrowed mutable element pointer; see file-level lifetime rules.
+ */
+void* dsc_vector_at_nconst(struct DS_COMMON_Vector* vector, size_t index);
+
 /**
  * @brief Returns a pointer to an element, or NULL if index is out of range.
  * @param[in] vector Initialized mutable or const vector pointer.
@@ -174,8 +222,8 @@ void* _impl_dsc_vector_at(struct DS_COMMON_Vector* vector, size_t index);
  */
 #define dsc_vector_at(vector, index)                                                                                   \
     _Generic((vector),                                                                                                 \
-        const struct DS_COMMON_Vector*: _impl_dsc_vector_at_const,                                                     \
-        struct DS_COMMON_Vector*: _impl_dsc_vector_at)(vector, index)
+        const struct DS_COMMON_Vector*: dsc_vector_at_const,                                                           \
+        struct DS_COMMON_Vector*: dsc_vector_at_nconst)(vector, index)
 
 /**
  * @brief Returns the number of live elements.

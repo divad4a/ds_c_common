@@ -11,7 +11,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 add_library(ds_c_common)
 
 target_sources(ds_c_common PRIVATE
-    src/vector.c
+    src/dsc_vector.c
 )
 target_include_directories(ds_c_common PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -21,7 +21,7 @@ target_include_directories(ds_c_common PUBLIC
 add_library(ds_c_common::ds_c_common ALIAS ds_c_common)
 
 if(BUILD_TESTING)
+    add_subdirectory(test_deps)
     add_subdirectory(tests)
 endif()
-
 
