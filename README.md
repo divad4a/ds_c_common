@@ -47,8 +47,8 @@ Define it in exactly one source file:
 #include "dsc_typed_vector_impl.h"
 ```
 
-Compile and link that source with the application. Other files include only
-`int_vector.h`:
+Compile that source and link it with the application and `ds_c_common`.
+Other files include only `int_vector.h`:
 
 ```c
 #include "int_vector.h"

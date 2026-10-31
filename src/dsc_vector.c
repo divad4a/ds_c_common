@@ -12,7 +12,7 @@ static bool _impl_dsc_vector_grow_if_necessary(struct DS_COMMON_Vector* vector, 
     size_t new_capacity = vector->capacity != 0 ? vector->capacity : 1;
     while(new_capacity < min_capacity)
     {
-        const auto growth = new_capacity / 2;
+        auto const growth = new_capacity / 2;
         new_capacity = new_capacity + (growth == 0 ? 1 : growth);
     }
     return dsc_vector_reserve(vector, new_capacity);

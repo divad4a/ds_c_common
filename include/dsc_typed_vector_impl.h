@@ -5,25 +5,33 @@
  * Include the user-owned declaration header first, define DSC_VECTOR_SUFFIX,
  * and include this file in exactly one .c file. Type and growth settings come
  * from the declaration. DSC_VECTOR_SUFFIX is undefined after inclusion.
+ * Link the resulting implementation with ds_c_common.
  */
 
 #ifndef DSC_VECTOR_SUFFIX
 #error "Define DSC_VECTOR_SUFFIX before including dsc_typed_vector_impl.h"
 #endif
 
-#if defined(DSC_VECTOR_TYPE) || defined(DSC_VECTOR_INITIAL_CAPACITY) || defined(DSC_VECTOR_GROWTH_NUMERATOR) ||         \
-    defined(DSC_VECTOR_GROWTH_DENOMINATOR)
+#if defined(DSC_VECTOR_TYPE) || defined(DSC_VECTOR_INITIAL_CAPACITY) || defined(DSC_VECTOR_GROWTH_NUMERATOR)           \
+    || defined(DSC_VECTOR_GROWTH_DENOMINATOR)
 #error "Configure the vector type and growth in its declaration, not its implementation"
 #endif
 
 #include "dsc_typed_vector_private.h"
+
+#include <stdalign.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define DSC_TYPED_VECTOR_PRIVATE_CAT_IMPL(a, b) a##b
 #define DSC_TYPED_VECTOR_PRIVATE_CAT(a, b) DSC_TYPED_VECTOR_PRIVATE_CAT_IMPL(a, b)
 #define DSC_TYPED_VECTOR_PRIVATE_BASE DSC_TYPED_VECTOR_PRIVATE_CAT(dsc_vector_, DSC_VECTOR_SUFFIX)
 #define DSC_TYPED_VECTOR_PRIVATE_NAME(name) DSC_TYPED_VECTOR_PRIVATE_CAT(DSC_TYPED_VECTOR_PRIVATE_BASE, name)
 
-static bool DSC_TYPED_VECTOR_PRIVATE_NAME(_private_grow)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+static bool DSC_TYPED_VECTOR_PRIVATE_NAME(_private_grow)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     const size_t max_capacity = SIZE_MAX / sizeof(DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t));
     if(vector->size >= max_capacity)
@@ -53,23 +61,23 @@ static bool DSC_TYPED_VECTOR_PRIVATE_NAME(_private_grow)(DSC_TYPED_VECTOR_PRIVAT
     return DSC_TYPED_VECTOR_PRIVATE_NAME(_reserve)(vector, new_capacity);
 }
 
-void DSC_TYPED_VECTOR_PRIVATE_NAME(_init)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+void DSC_TYPED_VECTOR_PRIVATE_NAME(_init)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     *vector = (DSC_TYPED_VECTOR_PRIVATE_NAME(_t)){0};
 }
 
-void DSC_TYPED_VECTOR_PRIVATE_NAME(_free)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+void DSC_TYPED_VECTOR_PRIVATE_NAME(_free)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     free(vector->data);
     *vector = (DSC_TYPED_VECTOR_PRIVATE_NAME(_t)){0};
 }
 
-void DSC_TYPED_VECTOR_PRIVATE_NAME(_clear)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+void DSC_TYPED_VECTOR_PRIVATE_NAME(_clear)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     vector->size = 0;
 }
 
-bool DSC_TYPED_VECTOR_PRIVATE_NAME(_reserve)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector, size_t new_capacity)
+bool DSC_TYPED_VECTOR_PRIVATE_NAME(_reserve)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector, size_t new_capacity)
 {
     if(new_capacity <= vector->capacity)
     {
@@ -93,7 +101,7 @@ bool DSC_TYPED_VECTOR_PRIVATE_NAME(_reserve)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* 
     return true;
 }
 
-bool DSC_TYPED_VECTOR_PRIVATE_NAME(_shrink_to_fit)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+bool DSC_TYPED_VECTOR_PRIVATE_NAME(_shrink_to_fit)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     if(vector->size == 0)
     {
@@ -119,7 +127,7 @@ bool DSC_TYPED_VECTOR_PRIVATE_NAME(_shrink_to_fit)(DSC_TYPED_VECTOR_PRIVATE_NAME
     return true;
 }
 
-bool DSC_TYPED_VECTOR_PRIVATE_NAME(_push_back)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector,
+bool DSC_TYPED_VECTOR_PRIVATE_NAME(_push_back)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector,
                                                DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t) value)
 {
     if(!DSC_TYPED_VECTOR_PRIVATE_NAME(_private_grow)(vector))
@@ -130,7 +138,7 @@ bool DSC_TYPED_VECTOR_PRIVATE_NAME(_push_back)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)
     return true;
 }
 
-bool DSC_TYPED_VECTOR_PRIVATE_NAME(_pop_back)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+bool DSC_TYPED_VECTOR_PRIVATE_NAME(_pop_back)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     if(vector->size == 0)
     {
@@ -140,7 +148,7 @@ bool DSC_TYPED_VECTOR_PRIVATE_NAME(_pop_back)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)*
     return true;
 }
 
-bool DSC_TYPED_VECTOR_PRIVATE_NAME(_insert)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector, size_t index,
+bool DSC_TYPED_VECTOR_PRIVATE_NAME(_insert)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector, size_t index,
                                             DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t) value)
 {
     if(index > vector->size || !DSC_TYPED_VECTOR_PRIVATE_NAME(_private_grow)(vector))
@@ -157,7 +165,7 @@ bool DSC_TYPED_VECTOR_PRIVATE_NAME(_insert)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* v
     return true;
 }
 
-bool DSC_TYPED_VECTOR_PRIVATE_NAME(_erase)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector, size_t index)
+bool DSC_TYPED_VECTOR_PRIVATE_NAME(_erase)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector, size_t index)
 {
     if(index >= vector->size)
     {
@@ -172,50 +180,50 @@ bool DSC_TYPED_VECTOR_PRIVATE_NAME(_erase)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* ve
     return true;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)* DSC_TYPED_VECTOR_PRIVATE_NAME(_front)(
-    DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+    * DSC_TYPED_VECTOR_PRIVATE_NAME(_front)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     return vector->size == 0 ? nullptr : vector->data;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t) const* DSC_TYPED_VECTOR_PRIVATE_NAME(_front_const)(
-    DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+const* DSC_TYPED_VECTOR_PRIVATE_NAME(_front_const)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector)
 {
     return vector->size == 0 ? nullptr : vector->data;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)* DSC_TYPED_VECTOR_PRIVATE_NAME(_back)(
-    DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+    * DSC_TYPED_VECTOR_PRIVATE_NAME(_back)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     return vector->size == 0 ? nullptr : vector->data + vector->size - 1;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t) const* DSC_TYPED_VECTOR_PRIVATE_NAME(_back_const)(
-    DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+const* DSC_TYPED_VECTOR_PRIVATE_NAME(_back_const)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector)
 {
     return vector->size == 0 ? nullptr : vector->data + vector->size - 1;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)* DSC_TYPED_VECTOR_PRIVATE_NAME(_data)(
-    DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+    * DSC_TYPED_VECTOR_PRIVATE_NAME(_data)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector)
 {
     return vector->size == 0 ? nullptr : vector->data;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t) const* DSC_TYPED_VECTOR_PRIVATE_NAME(_data_const)(
-    DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+const* DSC_TYPED_VECTOR_PRIVATE_NAME(_data_const)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector)
 {
     return vector->size == 0 ? nullptr : vector->data;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)* DSC_TYPED_VECTOR_PRIVATE_NAME(_at)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t)* vector,
-                                                                            size_t index)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+    * DSC_TYPED_VECTOR_PRIVATE_NAME(_at)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) * vector, size_t index)
 {
     return index >= vector->size ? nullptr : vector->data + index;
 }
 
-DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t) const* DSC_TYPED_VECTOR_PRIVATE_NAME(_at_const)(
-    DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector, size_t index)
+DSC_TYPED_VECTOR_PRIVATE_NAME(_value_t)
+const* DSC_TYPED_VECTOR_PRIVATE_NAME(_at_const)(DSC_TYPED_VECTOR_PRIVATE_NAME(_t) const* vector, size_t index)
 {
     return index >= vector->size ? nullptr : vector->data + index;
 }

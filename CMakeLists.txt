@@ -12,6 +12,7 @@ add_library(ds_c_common)
 
 target_sources(ds_c_common PRIVATE
     src/dsc_vector.c
+    src/dsc_typed_vector.c
 )
 target_include_directories(ds_c_common PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -24,4 +25,3 @@ if(BUILD_TESTING)
     add_subdirectory(test_deps)
     add_subdirectory(tests)
 endif()
-

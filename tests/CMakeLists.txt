@@ -26,6 +26,20 @@ set_tests_properties(ds_c_common.vector.vector_capacity PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1"
 )
 
+# Build the shared helpers with test allocators for deterministic failures.
+add_library(ds_c_common_test_typed_vector_helpers OBJECT
+    ${PROJECT_SOURCE_DIR}/src/dsc_typed_vector.c
+)
+target_include_directories(ds_c_common_test_typed_vector_helpers PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+)
+target_compile_definitions(ds_c_common_test_typed_vector_helpers PRIVATE
+    dsc_typed_vector_private_scaled_capacity=typed_vector_test_private_scaled_capacity
+    dsc_typed_vector_private_reallocate=typed_vector_test_private_reallocate
+    realloc=typed_vector_test_realloc
+    aligned_alloc=typed_vector_test_aligned_alloc
+)
+
 add_executable(ds_c_common_test_dsc_typed_vector
     test_dsc_typed_vector.c
     typed_vector_fixtures.c
@@ -34,6 +48,7 @@ add_executable(ds_c_common_test_dsc_typed_vector
 target_link_libraries(ds_c_common_test_dsc_typed_vector
     PRIVATE
         ds_c_common::ds_c_common
+        ds_c_common_test_typed_vector_helpers
         greatest::greatest
 )
 

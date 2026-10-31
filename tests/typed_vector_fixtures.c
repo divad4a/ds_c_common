@@ -1,7 +1,12 @@
 #include "typed_vector_fixtures.h"
 
+#include "dsc_typed_vector_private.h"
+
 #include <stdlib.h>
-#include <string.h>
+
+void* typed_vector_test_realloc(void* data, size_t size);
+void* typed_vector_test_aligned_alloc(size_t alignment, size_t size);
+void* typed_vector_test_private_reallocate(void* data, size_t live_bytes, size_t allocation_bytes, size_t alignment);
 
 static bool fail_next_allocation;
 static size_t aligned_allocation_count;
@@ -22,7 +27,7 @@ size_t typed_vector_test_aligned_allocation_count(void)
     return aligned_allocation_count;
 }
 
-static void* typed_vector_test_realloc(void* data, size_t size)
+void* typed_vector_test_realloc(void* data, size_t size)
 {
     if(fail_next_allocation)
     {
@@ -32,9 +37,8 @@ static void* typed_vector_test_realloc(void* data, size_t size)
     return realloc(data, size);
 }
 
-static void* typed_vector_test_aligned_alloc(size_t alignment, size_t size)
+void* typed_vector_test_aligned_alloc(size_t alignment, size_t size)
 {
-    ++aligned_allocation_count;
     if(fail_next_allocation)
     {
         fail_next_allocation = false;
@@ -43,9 +47,22 @@ static void* typed_vector_test_aligned_alloc(size_t alignment, size_t size)
     return aligned_alloc(alignment, size);
 }
 
-/* Inject allocation failures into the generated implementations. */
-#define realloc typed_vector_test_realloc
-#define aligned_alloc typed_vector_test_aligned_alloc
+/* Use the test-allocator build only when a failure was requested. */
+static void* typed_vector_test_dispatch_reallocate(void* data, size_t live_bytes, size_t allocation_bytes,
+                                                  size_t alignment)
+{
+    if(alignment > alignof(max_align_t))
+    {
+        ++aligned_allocation_count;
+    }
+    if(fail_next_allocation)
+    {
+        return typed_vector_test_private_reallocate(data, live_bytes, allocation_bytes, alignment);
+    }
+    return dsc_typed_vector_private_reallocate(data, live_bytes, allocation_bytes, alignment);
+}
+
+#define dsc_typed_vector_private_reallocate typed_vector_test_dispatch_reallocate
 
 #define DSC_VECTOR_SUFFIX int
 #include "dsc_typed_vector_impl.h"
@@ -77,8 +94,7 @@ static void* typed_vector_test_aligned_alloc(size_t alignment, size_t size)
 #define DSC_VECTOR_SUFFIX near_one
 #include "dsc_typed_vector_impl.h"
 
-#undef aligned_alloc
-#undef realloc
+#undef dsc_typed_vector_private_reallocate
 
 #if defined(DSC_VECTOR_SUFFIX) || defined(DSC_TYPED_VECTOR_PRIVATE_NAME) || defined(DSC_TYPED_VECTOR_PRIVATE_BASE) ||    \
     defined(DSC_TYPED_VECTOR_PRIVATE_CAT) || defined(DSC_TYPED_VECTOR_PRIVATE_CAT_IMPL)

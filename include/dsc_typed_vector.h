@@ -16,7 +16,8 @@
  * increases capacity by at least one. Configuration macros are undefined
  * after inclusion. Names are dsc_vector_SUFFIX_t, dsc_vector_SUFFIX_value_t
  * and dsc_vector_SUFFIX_*. Element size is known from the value type.
- * Include dsc_typed_vector_impl.h once in a .c file to define the functions.
+ * Include dsc_typed_vector_impl.h once in a .c file to define the functions,
+ * and link the implementation with ds_c_common.
  *
  * Elements are copied by value; pointed-to objects are not owned. Initialize
  * vectors with {0} or the generated init function. Do not copy an owning
