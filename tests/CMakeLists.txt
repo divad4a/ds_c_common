@@ -25,3 +25,28 @@ endforeach()
 set_tests_properties(ds_c_common.vector.vector_capacity PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1"
 )
+
+add_executable(ds_c_common_test_dsc_typed_vector
+    test_dsc_typed_vector.c
+    typed_vector_fixtures.c
+)
+
+target_link_libraries(ds_c_common_test_dsc_typed_vector
+    PRIVATE
+        ds_c_common::ds_c_common
+        greatest::greatest
+)
+
+set(TYPED_VECTOR_TEST_SUITES
+    typed_vector_lifecycle
+    typed_vector_capacity
+    typed_vector_modifiers
+    typed_vector_access
+    typed_vector_element_types
+    typed_vector_alignment
+    typed_vector_arithmetic
+)
+foreach(suite IN LISTS TYPED_VECTOR_TEST_SUITES)
+    add_test(NAME ds_c_common.typed_vector.${suite} COMMAND ds_c_common_test_dsc_typed_vector -v -e -s ${suite})
+    set_tests_properties(ds_c_common.typed_vector.${suite} PROPERTIES TIMEOUT 10)
+endforeach()
